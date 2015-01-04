@@ -13,3 +13,6 @@ configurations/*.cfg
 configurations/*.xml
 configurations/transform
 *.DS_Store
+webapps/images
+webapps/static
+webapps/README

@@ -1,0 +1,10 @@
+sitemap demo label="Main Menu"
+{
+	Frame {
+		Group item=All label="All" icon="firstfloor"
+		
+		Setpoint item=MockHour label="Mock hour [%.1f]" minValue=0 maxValue=23.5 step=0.5
+		
+		
+	}
+}

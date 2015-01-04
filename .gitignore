@@ -1,0 +1,15 @@
+LICENSE.TXT
+README.TXT
+start*.sh
+start*.bat
+workspace
+sounds
+server
+logs
+etc
+contexts
+addons
+configurations/*.cfg
+configurations/*.xml
+configurations/transform
+*.DS_Store

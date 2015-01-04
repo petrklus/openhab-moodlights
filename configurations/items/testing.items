@@ -1,0 +1,24 @@
+Group All
+
+/* Demo items */
+Switch DemoSwitch				"Switch"                                    (All)
+
+Number MockHour  			"Mock hour"					<sofa>              (All)
+
+
+Color  Color1					"RGB Light 1"				<slider>            (All)
+Color  Color2					"RGB Light 2"				<slider>            (All)
+Color  Color3					"RGB Light 3"				<slider>            (All)
+Color  Color4					"RGB Light 4"				<slider>            (All)
+Color  Color5					"RGB Light 5"				<slider>            (All)
+Color  Color6					"RGB Light 6"				<slider>            (All)
+/*
+Dimmer DimmedLight				"Dimmer [%d %%]"		<slider>            (All)
+Color  RGBLight					"RGB Light"				<slider>            (All)
+Rollershutter DemoShutter	 	"Roller Shutter"                            (All)
+Dimmer DemoBlinds			 	"Blinds [%d %%]"		<rollershutter>     (All)
+Number Scene_General			"Scene"					<sofa>              (All)
+Number Radio_Station			"Radio"					<network>           (All)
+Dimmer Volume 					"Volume [%.1f %%]"                          (All)
+Number Temperature_Setpoint		"Temperature [%.1f °C]" <temperature>       (All)
+ */

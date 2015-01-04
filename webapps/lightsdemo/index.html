@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Lights demo</title>
+
+    <!-- Bootstrap -->
+    <link href="css/bootstrap.min.css" rel="stylesheet">
+
+
+    <style type="text/css" media="screen">
+        .lightbox {
+            height: 100px;
+            line-height: 100px;
+            
+            /* center text*/
+            vertical-align: middle;
+            font-size: 4em;
+            text-align: center;
+        }
+    </style>
+    <!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/html5shiv/3.7.2/html5shiv.min.js"></script>
+      <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body>
+    <h1>Lights demo</h1>
+
+    <div class="container">
+        <div id="light_container">
+            Loading... please wait!
+        </div>
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="js/jquery-2.1.3.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="js/bootstrap.min.js"></script>
+    
+    <script src="js/mustache.js"></script>
+    
+    <!--http://localhost:8080/lightsdemo/index.html -->
+    
+    <script type="text/javascript">
+        var no_lights = 6
+        var per_row = 3 //12 is divisible by this
+        var light_item_prefix = "Color"
+        $().ready(function() {
+            console.log("Initialising..")
+            
+            var output = "<div class='row'>"
+            for (var i=1; i<=no_lights; i++) {
+                output+= Mustache.to_html(
+                    "<div class='col-xs-{{per_row}}'><div class='light{{id}} lightbox'>{{id}}</div></div>", 
+                    {
+                        id: i,
+                        per_row: 12/per_row,
+                    }
+                );
+                
+                if (i%per_row == 0) {
+                    output += "</div><div class='row'>"
+                }
+            }
+            output += "</div>"
+            
+            //populate bitches!
+            var container = $("#light_container").html(output)
+            
+            console.log("Lights initialised!")
+            
+            var update_colours = function() {
+                var container = $("#light_container")
+                for (var i=1; i<=no_lights; i++) {
+                    var new_scope = function(query_par) {
+                        $.get( "http://localhost:8080/rest/items/"+light_item_prefix+query_par+"?type=json", function(data) {
+                            if (data.state != "Uninitialized") {
+                                var col_arr = data.state.split(",")
+                                // leak = col_arr
+                                var el = container.find(".light"+query_par)
+                                var hue = parseFloat(col_arr[0])
+                                var lightness = 0.5*parseFloat(col_arr[2]) * (2-parseFloat(col_arr[1])/100)                        
+                                var satur = parseFloat(col_arr[2]) * parseFloat(col_arr[1]) / (100-Math.abs(2*lightness-100))                        
+                                var col_string = "hsl("+col_arr[0]+","+satur+"%,"+lightness+"%)"
+                                
+                                if (parseFloat(col_arr[2]) > 50) {
+                                    var color = "black"
+                                } else {
+                                    var color = "white"
+                                }
+                                
+                                el.css({
+                                    "background-color": col_string,
+                                    "color"           : color,
+                                })
+                            }
+                        })
+                    }
+                    new_scope(i)
+                }                
+            }
+            
+            setInterval(update_colours, 1000)
+        })
+    </script>
+  </body>
+</html>

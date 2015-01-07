@@ -26,11 +26,16 @@ var Number bed_hour = 0 // 0-23
 
 rule "Colourcycler map initialisation"
 when
-    System started
+    System started 
+    or Time is midnight
 then
+	logInfo("LightCycler", "Initialising colour map")		
 	lightcyclerUpdateLock.lock() //blocks here
 	try {
-		logInfo("LightCycler", "Init start")		
+		
+		// clear map and get ready for new entries. Useful in the future
+		// when hours are going to be bound to sunrise/sunset times
+		colourMap.clear()
 	
 		// populate colour map
 		colourMap.put(10*60, new HSBType("10,100,73"))			
@@ -56,6 +61,7 @@ then
 	} finally  {
     	lightcyclerUpdateLock.unlock()
     }
+    logInfo("LightCycler", "Colour map initialised&ready to roll")		    
 end
 
 // http://localhost:8080/lightsdemo/index.html for preview
@@ -117,19 +123,19 @@ then
 		
 		var HSBType cur_colour = new HSBType(new_hue, new_saturation, new_brightness);
 		
-		sendCommand(Color1, cur_colour)
+		
+		Lights.members.forEach(lightCol |
+			sendCommand(lightCol, cur_colour)	
+		)
 		
 		// just to test the threading, insert larger values if needed
 		// Thread::sleep(10)
 		
-				
 		logInfo("LightCycler", "Previous:  "+low_start.getKey()/60.0+", "+low_start.getValue())
 		logInfo("LightCycler", "Next:      "+high_start.getKey()/60.0+", "+high_start.getValue())				
 		logInfo("LightCycler", "Calculated:"+MockHour.state+", "+cur_colour)
 		logInfo("LightCycler", "Scaling factor:"+scaling_factor)
 		
-
-
 		
         logInfo("LightCycler", "stuff 2")        
     } finally  {

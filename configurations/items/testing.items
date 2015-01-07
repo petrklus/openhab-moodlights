@@ -5,13 +5,14 @@ Switch DemoSwitch				"Switch"                                    (All)
 
 Number MockHour  			"Mock hour"					<sofa>              (All)
 
+Group Lights 
 
-Color  Color1					"RGB Light 1"				<slider>            (All)
-Color  Color2					"RGB Light 2"				<slider>            (All)
-Color  Color3					"RGB Light 3"				<slider>            (All)
-Color  Color4					"RGB Light 4"				<slider>            (All)
-Color  Color5					"RGB Light 5"				<slider>            (All)
-Color  Color6					"RGB Light 6"				<slider>            (All)
+Color  Color1					"RGB Light 1"				<slider>            (All, Lights)
+Color  Color2					"RGB Light 2"				<slider>            (All, Lights)
+Color  Color3					"RGB Light 3"				<slider>            (All, Lights)
+Color  Color4					"RGB Light 4"				<slider>            (All, Lights)
+Color  Color5					"RGB Light 5"				<slider>            (All, Lights)
+Color  Color6					"RGB Light 6"				<slider>            (All, Lights)
 /*
 Dimmer DimmedLight				"Dimmer [%d %%]"		<slider>            (All)
 Color  RGBLight					"RGB Light"				<slider>            (All)

@@ -1,0 +1,20 @@
+import org.openhab.core.library.types.HSBType
+
+rule "Apply test colour to LIFX via HTTP REST interface (using lifx-http to handle requests)"
+when
+	Item Color1 received command
+then
+	logInfo("LightCycler", "Applying colour..")
+	
+	// here is the place where the colour applicationg logic would come
+	// for example - only switch the lights on if light levels are below X
+	// or just base it on time of the day..
+	
+	var HSBType intCol = (Color1.state as HSBType)	
+	
+	var String commandString = "http://192.168.2.188:56780/lights/d073d500072c/color?hue="+intCol.hue.intValue.toString
+        commandString = commandString + "&saturation=" + (intCol.saturation.floatValue/100.0).toString
+        commandString = commandString + "&brightness=" + (intCol.value.floatValue/100.0).toString + "&duration=1"
+        sendHttpPutRequest(commandString)
+	
+end

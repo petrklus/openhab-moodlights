@@ -1,98 +1,86 @@
 /** 
- * shows how to check recent switch states - very helpful to avoid executing something too often, just
- * because somebody presses a button too often (e.g. sending a notification, if the doorbell button is pressed)
+ * Calculates light colour based on time of the day
+ * Multiple colours can be assigned 
+ * TODO items
+ * - link with astro binding to make the colour assignments dynamic - for example, colour for dawn / dusk, morning, day
+ * - 
  */
  
-
-//import org.openhab.core.types.*
-//import org.openhab.core.library.types.*
-//import org.openhab.core.persistence.*
-//import org.java.math.*
-//import org.joda.time.*
 
 import org.openhab.model.script.actions.*
 import java.util.concurrent.locks.ReentrantLock
 import org.openhab.core.library.types.HSBType
 import org.openhab.core.library.types.DecimalType
+import org.openhab.core.library.types.PercentType
 import java.util.TreeMap
 import java.util.Map
 import java.lang.Thread // to test sleeping
-
+import java.lang.Math
 
  
-var ReentrantLock myTestLock = new ReentrantLock()
+var ReentrantLock lightcyclerUpdateLock = new ReentrantLock()
 var TreeMap<Integer, HSBType> colourMap = new TreeMap<Integer, HSBType>()
 
+var Number bed_hour = 0 // 0-23
 
-/*
-rule "Persistence Demo 2"
-when
-	Item DemoSwitch received command
-then
-	if(!DemoSwitch.changedSince(now.minusSeconds(5))) {
-		logInfo("Persistence Demo", "You did not press this button during the last 5 seconds!")
-	}
-end
- */
 
-rule "Initialise variables - required"
+rule "Colourcycler map initialisation"
 when
     System started
 then
+	lightcyclerUpdateLock.lock() //blocks here
+	try {
+		logInfo("LightCycler", "Init start")		
 	
-	logInfo("LightCycler", "Init start")		
+		// populate colour map
+		colourMap.put(10*60, new HSBType("10,100,73"))			
+		colourMap.put(19*60, new HSBType("180,50,80"))
+		colourMap.put(20*60, new HSBType("28,100,50"))
+		colourMap.put(23*60, new HSBType("10,100,50"))    
 	
-	// populate colour map
-	colourMap.put(17*60, new HSBType("180,100,73"))			
-	colourMap.put(19*60, new HSBType("180,50,80"))
-	colourMap.put(20*60, new HSBType("28,100,50"))
-	colourMap.put(23*60, new HSBType("10,100,50"))    
+		// midnight needs to be defined.. makes it easier
+		// TODO automatic calculation from values above is possible
+		// by finding & scaling before/after values for midnight			
+		var HSBType midnight_colour =  new HSBType("300,100,45")
+		colourMap.put(0,      midnight_colour)      // required value 	
+		colourMap.put(24*60,  midnight_colour)      // required value 
 	
-	// midnight needs to be defined.. makes it easier
-	colourMap.put(0,  new HSBType("10,100,45"))      // required value 	
-	colourMap.put(24*60,  new HSBType("10,100,45"))  // required value 
+		logInfo("LightCycler", "Colour map init")
 	
-	logInfo("LightCycler", "Init done")
+		
+		// initialize mockhour if needed
+		if (MockHour == Uninitialized) {
+			MockHour.sendCommand(16)	
+		}
 	
-	
-	// initialize mockhour if needed
-	if (MockHour == Uninitialized) {
-		MockHour.sendCommand(16)	
-	}
-	
-	
+	} finally  {
+    	lightcyclerUpdateLock.unlock()
+    }
 end
 
-
-		
-		
-
-
-// http://localhost:8080/lightsdemo/index.html
-rule "Calculate relevant colour"
+// http://localhost:8080/lightsdemo/index.html for preview
+rule "Calculate current colour when hour changes"
 when
     Item MockHour received command
 then
-	myTestLock.lock() //blocks here
+	lightcyclerUpdateLock.lock() //blocks here
 	try {
 		
-		
-		executeCommandLine("curl -XPUT \"http://192.168.2.188:56780/lights/d073d500072c/color?hue=100&saturation=1&brightness=1&duration=1\" -d ''")
-        logInfo("LightCycler", "stuff 1")           
+        logInfo("LightCycler", "Starting colour change")           
         var hour   = now.getHourOfDay                
 
 		var minute = ((MockHour.state as DecimalType).floatValue*60%60).intValue
 		hour = (MockHour.state as DecimalType).intValue
 		
-		var currentMinutes =   hour*60 + minute
+		var current_minutes =   hour*60 + minute
+
+		logInfo("LightCycler", "Hour:Minute " + hour + ":" + minute)
+		logInfo("LightCycler", "Minutes:" + current_minutes)
+		
 		// http://stackoverflow.com/questions/9482988/find-the-closest-answer-in-hashmap
 		// find closest value low (or equal)
-		
-		logInfo("LightCycler", "Hour:Minute " + hour + ":" + minute)
-		logInfo("LightCycler", "Minutes:" + currentMinutes)
-		
-		var low_start = colourMap.floorEntry(currentMinutes)				
-		var high_start = colourMap.ceilingEntry((currentMinutes+1)%(24*60))
+		var low_start = colourMap.floorEntry(current_minutes)				
+		var high_start = colourMap.ceilingEntry((current_minutes+1)%(24*60))
 		
 		var minutes_low  = low_start.getKey()
 		var minutes_high = high_start.getKey() 
@@ -101,33 +89,50 @@ then
 			minutes_high = minutes_high+ 24*60
 		}
 		
-		var change_range = minutes_high - minutes_low
-		// assuming that low is higher than high				
+		var Number scaling_factor = 0
+		try {
+			scaling_factor = (current_minutes - minutes_low) / (minutes_high - minutes_low)
+		} catch (ArithmeticException ae) {
+			// noop, means that we will not add anything to the starting val			
+		}				
 		
-		var midColour = new HSBType("0,0,0");
 		// linear scale for hue, saturation, brightness
+		// only for Hue we are finding shortest distance on the circle		
+		var HSBType colour_start = low_start.getValue()
+		var HSBType colour_end =   high_start.getValue()
 		
-	
-	//		low_start.getValue().hue
+		// make sure we have the closest available distance
+		var Number diff_hue = colour_end.getHue() - colour_start.getHue()
+		if ((Math::abs(diff_hue.floatValue) >= 180)) {
+			// absolute value modulo 180, subtract 180 and invert sign for negative			 
+			diff_hue = Math::signum(diff_hue.floatValue) *  (Math::abs(diff_hue.floatValue)%180 -180)
+		}
 		
-		// just to test the threading shizzle
-		Thread::sleep(500)
-		
-		logInfo("LightCycler", ""+low_start.getKey()/60.0+", "+low_start.getValue())
-		logInfo("LightCycler", ""+high_start.getKey()/60.0+", "+high_start.getValue())
-		
-		// find closet value higher
+		logInfo("LightCycler", "diffHue:  "+diff_hue)
 		
 		
-		/*
-		redValue   = hsbValue.red.intValue.toString
-        greenValue = hsbValue.green.intValue.toString
-        blueValue  = hsbValue.blue.intValue.toString
- */
+		var new_hue = new DecimalType((colour_start.getHue().floatValue() + diff_hue * scaling_factor + 360).floatValue % 360)
+		var new_saturation = new PercentType(colour_start.getSaturation() + (colour_end.getSaturation() - colour_start.getSaturation()) * scaling_factor)
+		var new_brightness = new PercentType(colour_start.getBrightness() + (colour_end.getBrightness() - colour_start.getBrightness()) * scaling_factor)
+		
+		var HSBType cur_colour = new HSBType(new_hue, new_saturation, new_brightness);
+		
+		sendCommand(Color1, cur_colour)
+		
+		// just to test the threading, insert larger values if needed
+		// Thread::sleep(10)
+		
+				
+		logInfo("LightCycler", "Previous:  "+low_start.getKey()/60.0+", "+low_start.getValue())
+		logInfo("LightCycler", "Next:      "+high_start.getKey()/60.0+", "+high_start.getValue())				
+		logInfo("LightCycler", "Calculated:"+MockHour.state+", "+cur_colour)
+		logInfo("LightCycler", "Scaling factor:"+scaling_factor)
+		
+
 
 		
         logInfo("LightCycler", "stuff 2")        
     } finally  {
-    	myTestLock.unlock()
+    	lightcyclerUpdateLock.unlock()
     }
 end
